@@ -1,0 +1,12 @@
+{
+	"authors": [
+		"Brian"
+	],
+	"copyright": "Copyright © 2021, Brian",
+	"dependencies": {
+		"imageformats": "~>7.0.2"
+	},
+	"description": "D GUI framework",
+	"license": "BSL-1.0",
+	"name": "dui"
+}

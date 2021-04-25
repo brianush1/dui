@@ -1,0 +1,19 @@
+{
+	"authors": [
+		"Brian"
+	],
+	"copyright": "Copyright © 2021, Brian",
+	"dependencies": {
+		"dui": {
+			"path": "../..",
+			"version": ">=0.0.0"
+		},
+		"imageformats": "~>7.0.2"
+	},
+	"description": "A minimal D application.",
+	"license": "BSL-1.0",
+	"name": "test",
+	"stringImportPaths": [
+		"assets"
+	]
+}

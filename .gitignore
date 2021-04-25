@@ -1,0 +1,17 @@
+.vscode
+.dub
+docs.json
+__dummy.html
+docs/
+/dui
+dui.so
+dui.dylib
+dui.dll
+dui.a
+dui.lib
+dui-test-*
+libdui.a
+*.exe
+*.o
+*.obj
+*.lst
