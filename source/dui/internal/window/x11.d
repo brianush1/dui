@@ -23,6 +23,9 @@ final class XConnection {
 		if (display == null) {
 			throw new Exception("could not open display");
 		}
+
+		Bool success;
+		x._XkbSetDetectableAutoRepeat(display, True, &success);
 	}
 
 	~this() {
@@ -66,12 +69,12 @@ final class XConnection {
 					break;
 				case KeyPress:
 					if (auto win = ev.xkey.window in windowMap) {
-						win.onKeyDown.emit(xk2keycode(ev.xkey.keycode));
+						win.onKeyDown.emit(xk2keycode(keycodeToKeysym(display, ev.xkey.keycode, 0)));
 					}
 					break;
 				case KeyRelease:
 					if (auto win = ev.xkey.window in windowMap) {
-						win.onKeyUp.emit(xk2keycode(ev.xkey.keycode));
+						win.onKeyUp.emit(xk2keycode(keycodeToKeysym(display, ev.xkey.keycode, 0)));
 					}
 					break;
 				case MapNotify:
@@ -197,10 +200,122 @@ void initX11() {
 	glx.makeCurrent(x.display, x.rootWindow(x.display, screen), glc);
 }
 
-KeyCode xk2keycode(uint xk) {
+KeyCode xk2keycode(KeySym xk) {
 	switch (xk) {
-	default:
-		return KeyCode.Unknown;
+		case KeySym.XK_F1: return KeyCode.F1;
+		case KeySym.XK_F2: return KeyCode.F2;
+		case KeySym.XK_F3: return KeyCode.F3;
+		case KeySym.XK_F4: return KeyCode.F4;
+		case KeySym.XK_F5: return KeyCode.F5;
+		case KeySym.XK_F6: return KeyCode.F6;
+		case KeySym.XK_F7: return KeyCode.F7;
+		case KeySym.XK_F8: return KeyCode.F8;
+		case KeySym.XK_F9: return KeyCode.F9;
+		case KeySym.XK_F10: return KeyCode.F10;
+		case KeySym.XK_F11: return KeyCode.F11;
+		case KeySym.XK_F12: return KeyCode.F12;
+		case KeySym.XK_F13: return KeyCode.F13;
+		case KeySym.XK_F14: return KeyCode.F14;
+		case KeySym.XK_F15: return KeyCode.F15;
+		case KeySym.XK_F16: return KeyCode.F16;
+		case KeySym.XK_F17: return KeyCode.F17;
+		case KeySym.XK_F18: return KeyCode.F18;
+		case KeySym.XK_F19: return KeyCode.F19;
+		case KeySym.XK_F20: return KeyCode.F20;
+		case KeySym.XK_Escape: return KeyCode.Esc;
+		case KeySym.XK_Scroll_Lock: return KeyCode.ScrollLock;
+		case KeySym.XK_Print: return KeyCode.PrintScreen;
+		case KeySym.XK_Delete: return KeyCode.Delete;
+		case KeySym.XK_Home: return KeyCode.Home;
+		case KeySym.XK_End: return KeyCode.End;
+		case KeySym.XK_Page_Up: return KeyCode.PageUp;
+		case KeySym.XK_Page_Down: return KeyCode.PageDown;
+		case KeySym.XK_grave: return KeyCode.Backtick;
+		case KeySym.XK_1: return KeyCode.D1;
+		case KeySym.XK_2: return KeyCode.D2;
+		case KeySym.XK_3: return KeyCode.D3;
+		case KeySym.XK_4: return KeyCode.D4;
+		case KeySym.XK_5: return KeyCode.D5;
+		case KeySym.XK_6: return KeyCode.D6;
+		case KeySym.XK_7: return KeyCode.D7;
+		case KeySym.XK_8: return KeyCode.D8;
+		case KeySym.XK_9: return KeyCode.D9;
+		case KeySym.XK_0: return KeyCode.D0;
+		case KeySym.XK_minus: return KeyCode.Minus;
+		case KeySym.XK_equal: return KeyCode.Equals;
+		case KeySym.XK_BackSpace: return KeyCode.Backspace;
+		case KeySym.XK_Tab: return KeyCode.Tab;
+		case KeySym.XK_q: return KeyCode.Q;
+		case KeySym.XK_w: return KeyCode.W;
+		case KeySym.XK_e: return KeyCode.E;
+		case KeySym.XK_r: return KeyCode.R;
+		case KeySym.XK_t: return KeyCode.T;
+		case KeySym.XK_y: return KeyCode.Y;
+		case KeySym.XK_u: return KeyCode.U;
+		case KeySym.XK_i: return KeyCode.I;
+		case KeySym.XK_o: return KeyCode.O;
+		case KeySym.XK_p: return KeyCode.P;
+		case KeySym.XK_bracketleft: return KeyCode.OpenBracket;
+		case KeySym.XK_bracketright: return KeyCode.ClosedBracket;
+		case KeySym.XK_backslash: return KeyCode.Backslash;
+		case KeySym.XK_Caps_Lock: return KeyCode.CapsLock;
+		case KeySym.XK_a: return KeyCode.A;
+		case KeySym.XK_s: return KeyCode.S;
+		case KeySym.XK_d: return KeyCode.D;
+		case KeySym.XK_f: return KeyCode.F;
+		case KeySym.XK_g: return KeyCode.G;
+		case KeySym.XK_h: return KeyCode.H;
+		case KeySym.XK_j: return KeyCode.J;
+		case KeySym.XK_k: return KeyCode.K;
+		case KeySym.XK_l: return KeyCode.L;
+		case KeySym.XK_semicolon: return KeyCode.Semicolon;
+		case KeySym.XK_apostrophe: return KeyCode.Apostrophe;
+		case KeySym.XK_Return: return KeyCode.Enter;
+		case KeySym.XK_Shift_L: return KeyCode.LeftShift;
+		case KeySym.XK_z: return KeyCode.Z;
+		case KeySym.XK_x: return KeyCode.X;
+		case KeySym.XK_c: return KeyCode.C;
+		case KeySym.XK_v: return KeyCode.V;
+		case KeySym.XK_b: return KeyCode.B;
+		case KeySym.XK_n: return KeyCode.N;
+		case KeySym.XK_m: return KeyCode.M;
+		case KeySym.XK_comma: return KeyCode.Comma;
+		case KeySym.XK_period: return KeyCode.Period;
+		case KeySym.XK_slash: return KeyCode.Slash;
+		case KeySym.XK_Shift_R: return KeyCode.RightShift;
+		case KeySym.XK_Control_L: return KeyCode.LeftControl;
+		case KeySym.XK_Super_L: return KeyCode.LeftSuper;
+		case KeySym.XK_Alt_L: return KeyCode.LeftAlt;
+		case KeySym.XK_space: return KeyCode.Space;
+		case KeySym.XK_Alt_R: return KeyCode.RightAlt;
+		case KeySym.XK_Control_R: return KeyCode.RightControl;
+		case KeySym.XK_Hyper_L: return KeyCode.LeftHyper;
+		case KeySym.XK_Hyper_R: return KeyCode.RightHyper;
+		case KeySym.XK_Meta_L: return KeyCode.LeftMeta;
+		case KeySym.XK_Meta_R: return KeyCode.RightMeta;
+		case KeySym.XK_leftarrow: return KeyCode.LeftArrow;
+		case KeySym.XK_rightarrow: return KeyCode.RightArrow;
+		case KeySym.XK_uparrow: return KeyCode.UpArrow;
+		case KeySym.XK_downarrow: return KeyCode.DownArrow;
+		case KeySym.XK_Menu: return KeyCode.ContextMenu;
+		// case KeySym.XK_Macro: return KeyCode.Macro; // TODO: this
+		case KeySym.XK_Num_Lock: return KeyCode.NumLock;
+		case KeySym.XK_KP_Divide: return KeyCode.NumpadSlash;
+		case KeySym.XK_KP_Multiply: return KeyCode.NumpadAsterisk;
+		case KeySym.XK_KP_Subtract: return KeyCode.NumpadMinus;
+		case KeySym.XK_KP_Decimal: return KeyCode.NumpadPeriod;
+		case KeySym.XK_KP_Enter: return KeyCode.NumpadEnter;
+		case KeySym.XK_KP_0: return KeyCode.Numpad0;
+		case KeySym.XK_KP_1: return KeyCode.Numpad1;
+		case KeySym.XK_KP_2: return KeyCode.Numpad2;
+		case KeySym.XK_KP_3: return KeyCode.Numpad3;
+		case KeySym.XK_KP_4: return KeyCode.Numpad4;
+		case KeySym.XK_KP_5: return KeyCode.Numpad5;
+		case KeySym.XK_KP_6: return KeyCode.Numpad6;
+		case KeySym.XK_KP_7: return KeyCode.Numpad7;
+		case KeySym.XK_KP_8: return KeyCode.Numpad8;
+		case KeySym.XK_KP_9: return KeyCode.Numpad9;
+		default: return KeyCode.Unknown;
 	}
 }
 

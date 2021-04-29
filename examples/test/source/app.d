@@ -52,6 +52,16 @@ void main() {
 		win.canvas.fill(path);
 		win.queueRedraw();
 	});
+	win.onKeyDown.connect((key) {
+		import std.stdio : writeln;
+
+		writeln("press ", key);
+	});
+	win.onKeyUp.connect((key) {
+		import std.stdio : writeln;
+
+		writeln("release ", key);
+	});
 	win.show();
 	Window win2 = new Window("Dui 2");
 	win2.onPaint.connect({
