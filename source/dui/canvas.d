@@ -72,9 +72,30 @@ final class Image {
 		texture = globalContext.createTexture(IVec2(cast(int) width, cast(int) height), pixels);
 	}
 
+	private this(size_t width, size_t height, immutable(void)[] pixels) {
+		this.width = width;
+		this.height = height;
+		this.pixels = pixels;
+		texture = globalContext.createTexture(IVec2(cast(int) width, cast(int) height), pixels);
+	}
+
 	~this() {
 		if (texture)
 			texture.free();
+	}
+
+	static Image fromRawPixels(const(void)[] data, int width) {
+		return new Image(
+			cast(size_t) width, data.length / (cast(size_t) 4 * width),
+			data.idup,
+		);
+	}
+
+	immutable(void)[] save() {
+		import imageformats : write_png_to_mem;
+
+		return cast(immutable(void)[]) write_png_to_mem(width, height,
+			cast(ubyte[]) pixels, 4);
 	}
 
 }
@@ -117,6 +138,7 @@ final class Canvas {
 
 	this() {
 		backend = new Renderer();
+		setupGlobalContext(defaultBackend);
 		backend.setup(globalContext);
 		clear(Vec4(0, 0, 0, 0), IVec2(320, 200));
 	}

@@ -6,3 +6,5 @@ public import dui.canvas;
 public import dui.signal;
 public import dui.log;
 public import dui.enums;
+public import dui.window;
+public import dui.eventloop;

@@ -1,6 +1,5 @@
 module dui.internal.bindings.loader;
 
-// TODO: load libraries only once if called multiple times
 T loadSharedLibrary(T, string delegate(string) toLibraryName)(string[] libraries) if (is(T == interface)) {
 	enum Members = {
 		string[] members;
@@ -17,10 +16,14 @@ T loadSharedLibrary(T, string delegate(string) toLibraryName)(string[] libraries
 
 		extern(System) @nogc nothrow:
 
+		private int numLoaded;
+
 		void close() {
 			import core.sys.posix.dlfcn : dlclose;
 
-			if (dl !is null) {
+			numLoaded -= 1;
+
+			if (dl !is null && numLoaded <= 0) {
 				dlclose(dl);
 				dl = null;
 			}
@@ -40,7 +43,14 @@ T loadSharedLibrary(T, string delegate(string) toLibraryName)(string[] libraries
 		}
 	}
 
-	ResultType result = new ResultType;
+	static ResultType result;
+
+	if (result) {
+		result.numLoaded += 1;
+		return result;
+	}
+
+	ResultType potentialResult = new ResultType;
 
 	version (Posix) {
 		import core.sys.posix.dlfcn : dlopen, dlerror, dlsym, RTLD_NOW;
@@ -65,12 +75,14 @@ T loadSharedLibrary(T, string delegate(string) toLibraryName)(string[] libraries
 							continue nextLibrary;
 						}
 					}
-					*cast(void**)&__traits(getMember, result, "_impl" ~ member) = sym;
+					*cast(void**)&__traits(getMember, potentialResult, "_impl" ~ member) = sym;
 				}}
 				if (hasErrors) {
 					throw new Exception("could not load library " ~ library);
 				}
-				result.dl = dl;
+				potentialResult.dl = dl;
+				result = potentialResult;
+				result.numLoaded += 1;
 				return result;
 			}
 		}

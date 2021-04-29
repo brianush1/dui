@@ -13,6 +13,12 @@ struct Signal(Args...) {
 		return id;
 	}
 
+	UUID connect(ref Signal!Args receiver) {
+		return connect((Args args) {
+			receiver.emit(args);
+		});
+	}
+
 	bool hasSlot(UUID slot) const {
 		return (slot in handlers) != null;
 	}

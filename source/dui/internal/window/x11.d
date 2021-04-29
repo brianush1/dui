@@ -1,5 +1,6 @@
 module dui.internal.window.x11;
 import dui.internal.bindings.x11;
+import dui.internal.bindings.x11 : Window;
 import dui.internal.bindings.glx;
 import dui.internal.bindings.opengl;
 import dui.internal.window;
@@ -40,63 +41,160 @@ final class XConnection {
 		return a;
 	}
 
-	void eventLoop() {
-		while (true) {
-			while (pending(display) > 0) {
-				XEvent ev;
-				nextEvent(display, &ev);
+	bool processEvents() {
+		if (pending(display) > 0) {
+			XEvent ev;
+			nextEvent(display, &ev);
 
-				// { import std.stdio : writeln; try { writeln(ev.type); } catch (Exception) {} }
-
-				switch (ev.type) {
-					case ClientMessage:
-						if (auto win = ev.xclient.window in windowMap) {
-							if (ev.xclient.data.l[0] == getAtom!"WM_DELETE_WINDOW") {
-								win.onCloseRequest.emit();
-							}
+			switch (ev.type) {
+				case ClientMessage:
+					if (auto win = ev.xclient.window in windowMap) {
+						if (ev.xclient.data.l[0] == getAtom!"WM_DELETE_WINDOW") {
+							win.onCloseRequest.emit();
 						}
-						break;
-					case Expose:
-						if (auto win = ev.xexpose.window in windowMap) {
-							win.redraw();
+						else if (ev.xclient.message_type == getAtom!"_X11DUI_CUSTOM_EVENT_") {
+							auto callback = queuedCallbacks[0];
+							queuedCallbacks = queuedCallbacks[1 .. $];
+							callback();
 						}
-						break;
-					case KeyPress:
-						if (auto win = ev.xkey.window in windowMap) {
-							win.onKeyDown.emit(xk2keycode(ev.xkey.keycode));
-						}
-						break;
-					case KeyRelease:
-						if (auto win = ev.xkey.window in windowMap) {
-							win.onKeyUp.emit(xk2keycode(ev.xkey.keycode));
-						}
-						break;
-					case MapNotify:
-						if (auto win = ev.xmap.window in windowMap) {
-							win._visibility = true;
-						}
-						break;
-					case UnmapNotify:
-						if (auto win = ev.xunmap.window in windowMap) {
-							win._visibility = false;
-						}
-						break;
-					case DestroyNotify:
-						if (auto win = ev.xdestroywindow.window in windowMap) {
-							windowMap.remove(ev.xdestroywindow.window);
-							// TODO: see what else needs to be done
-						}
-						break;
-					default:
-						break;
-				}
+					}
+					break;
+				case Expose:
+					if (auto win = ev.xexpose.window in windowMap) {
+						win.redraw();
+					}
+					break;
+				case KeyPress:
+					if (auto win = ev.xkey.window in windowMap) {
+						win.onKeyDown.emit(xk2keycode(ev.xkey.keycode));
+					}
+					break;
+				case KeyRelease:
+					if (auto win = ev.xkey.window in windowMap) {
+						win.onKeyUp.emit(xk2keycode(ev.xkey.keycode));
+					}
+					break;
+				case MapNotify:
+					if (auto win = ev.xmap.window in windowMap) {
+						win._visibility = true;
+					}
+					break;
+				case UnmapNotify:
+					if (auto win = ev.xunmap.window in windowMap) {
+						win._visibility = false;
+					}
+					break;
+				case DestroyNotify:
+					if (auto win = ev.xdestroywindow.window in windowMap) {
+						windowMap.remove(ev.xdestroywindow.window);
+						// TODO: see what else needs to be done
+					}
+					break;
+				default:
+					break;
 			}
 
-			foreach (win; windowMap.byValue) {
-				win.redraw();
-			}
+			return true;
+		}
+		else {
+			return false;
 		}
 	}
+
+	void waitForEvents() {
+		XEvent ev;
+		peekEvent(display, &ev);
+	}
+
+	void delegate()[] queuedCallbacks;
+
+	void enqueueEvent(void delegate() callback) {
+		queuedCallbacks.assumeSafeAppend ~= callback;
+
+		// just pick any window, it doesn't matter which
+		auto window = windowMap.byValue.front.window;
+
+		XEvent ev;
+		ev.xclient.type = ClientMessage;
+		ev.xclient.window = window;
+		ev.xclient.message_type = getAtom!"_X11DUI_CUSTOM_EVENT_";
+		ev.xclient.format = 32;
+		ev.xclient.data.l[0] = 0;
+		x.sendEvent(display, window, false, NoEventMask, &ev);
+		x.flush(display);
+	}
+}
+
+static XConnection x;
+private static GLX glx;
+private static OpenGL gl;
+private static GLXContext glc;
+private static GLXFBConfig fbconf;
+
+enum ubyte openGlMajor = 3; // TODO: let the user specify an OpenGL version maybe
+enum ubyte openGlMinor = 3;
+
+void initX11() {
+	x = new XConnection;
+	glx = loadGLX;
+	gl = loadOpenGL;
+
+	auto screen = x.defaultScreen(x.display);
+
+	OpenGL.Int majorGLX, minorGLX;
+	bool querySuccess = glx.queryVersion(x.display, &majorGLX, &minorGLX) != 0;
+	enforce(querySuccess &&
+		!(majorGLX == 1 && minorGLX < 3) && majorGLX >= 1, "GLX version must be >=1.3");
+
+	OpenGL.Int[] glxAttribs = [
+		glx.X_RENDERABLE, True,
+		glx.DRAWABLE_TYPE, glx.WINDOW_BIT,
+		glx.RENDER_TYPE, glx.RGBA_BIT,
+		glx.X_VISUAL_TYPE, glx.TRUE_COLOR,
+		glx.RED_SIZE, 8,
+		glx.GREEN_SIZE, 8,
+		glx.BLUE_SIZE, 8,
+		glx.ALPHA_SIZE, 8,
+		glx.DEPTH_SIZE, 24,
+		glx.STENCIL_SIZE, 8,
+		glx.DOUBLEBUFFER, True,
+		None,
+	];
+
+	int fbcount;
+	GLXFBConfig* fbc = glx.chooseFBConfig(x.display, screen, glxAttribs.ptr, &fbcount);
+	if (fbcount == 0) {
+		throw new Exception("failed to retrieve framebuffer");
+	}
+
+	int bestNumSamples = -1;
+	foreach (i; 0 .. fbcount) {
+		XVisualInfo* vi = glx.getVisualFromFBConfig(x.display, fbc[i]);
+		if (vi != null) {
+			int sb, samples;
+			glx.getFBConfigAttrib(x.display, fbc[i], glx.SAMPLE_BUFFERS, &sb);
+			glx.getFBConfigAttrib(x.display, fbc[i], glx.SAMPLES, &samples);
+			if (bestNumSamples == -1 || (sb && samples > bestNumSamples)) {
+				fbconf = fbc[i];
+				bestNumSamples = samples;
+			}
+		}
+		x.free(vi);
+	}
+	x.free(fbc);
+
+	OpenGL.Int[] contextAttribs = [
+		glx.CONTEXT_MAJOR_VERSION_ARB, cast(OpenGL.Int) openGlMajor,
+		glx.CONTEXT_MINOR_VERSION_ARB, cast(OpenGL.Int) openGlMinor,
+		glx.CONTEXT_PROFILE_MASK_ARB, glx.CONTEXT_CORE_PROFILE_BIT_ARB,
+		glx.CONTEXT_FLAGS_ARB, glx.CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+		None,
+	];
+
+	glc = glx.createContextAttribsARB(x.display, fbconf, null, True, contextAttribs.ptr);
+	enforce(glc);
+
+	glx.makeCurrent(x.display, x.rootWindow(x.display, screen), glc);
 }
 
 KeyCode xk2keycode(uint xk) {
@@ -108,68 +206,10 @@ KeyCode xk2keycode(uint xk) {
 
 final class X11Window : AbstractWindow {
 
-	XConnection x;
-	GLX glx;
-	OpenGL gl;
-
 	Window window;
 
-	GLXContext glc;
-
-	this(
-		ubyte openGlMajor, ubyte openGlMinor,
-		uint defaultWidth, uint defaultHeight,
-		string title, string className,
-	) {
-		x = new XConnection;
-		glx = loadGLX;
-		gl = loadOpenGL;
-
+	this(InternalWindowOptions options) {
 		auto screen = x.defaultScreen(x.display);
-
-		OpenGL.Int majorGLX, minorGLX;
-		bool querySuccess = glx.queryVersion(x.display, &majorGLX, &minorGLX) != 0;
-		enforce(querySuccess &&
-			!(majorGLX == 1 && minorGLX < 3) && majorGLX >= 1, "GLX version must be >=1.3");
-
-		OpenGL.Int[] glxAttribs = [
-			glx.X_RENDERABLE, True,
-			glx.DRAWABLE_TYPE, glx.WINDOW_BIT,
-			glx.RENDER_TYPE, glx.RGBA_BIT,
-			glx.X_VISUAL_TYPE, glx.TRUE_COLOR,
-			glx.RED_SIZE, 8,
-			glx.GREEN_SIZE, 8,
-			glx.BLUE_SIZE, 8,
-			glx.ALPHA_SIZE, 8,
-			glx.DEPTH_SIZE, 24,
-			glx.STENCIL_SIZE, 8,
-			glx.DOUBLEBUFFER, True,
-			None,
-		];
-
-		int fbcount;
-		GLXFBConfig* fbc = glx.chooseFBConfig(x.display, screen, glxAttribs.ptr, &fbcount);
-		if (fbcount == 0) {
-			x.closeDisplay(x.display);
-			throw new Exception("failed to retrieve framebuffer");
-		}
-
-		GLXFBConfig fbconf;
-		int bestNumSamples = -1;
-		foreach (i; 0 .. fbcount) {
-			XVisualInfo* vi = glx.getVisualFromFBConfig(x.display, fbc[i]);
-			if (vi != null) {
-				int sb, samples;
-				glx.getFBConfigAttrib(x.display, fbc[i], glx.SAMPLE_BUFFERS, &sb);
-				glx.getFBConfigAttrib(x.display, fbc[i], glx.SAMPLES, &samples);
-				if (bestNumSamples == -1 || (sb && samples > bestNumSamples)) {
-					fbconf = fbc[i];
-					bestNumSamples = samples;
-				}
-			}
-			x.free(vi);
-		}
-		x.free(fbc);
 
 		XVisualInfo* vi = glx.getVisualFromFBConfig(x.display, fbconf);
 		assert(vi);
@@ -180,31 +220,19 @@ final class X11Window : AbstractWindow {
 
 		window = x.createWindow(x.display,
 			root,
-			0, 0, defaultWidth, defaultHeight,
+			0, 0, options.defaultWidth, options.defaultHeight,
 			0, vi.depth, InputOutput, vi.visual, CWColormap, &swa,
 		);
 
-		OpenGL.Int[] contextAttribs = [
-			glx.CONTEXT_MAJOR_VERSION_ARB, cast(OpenGL.Int) openGlMajor,
-			glx.CONTEXT_MINOR_VERSION_ARB, cast(OpenGL.Int) openGlMinor,
-			glx.CONTEXT_PROFILE_MASK_ARB, glx.CONTEXT_CORE_PROFILE_BIT_ARB,
-			glx.CONTEXT_FLAGS_ARB, glx.CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-			None,
-		];
-
-		glc = glx.createContextAttribsARB(x.display, fbconf, null, True, contextAttribs.ptr);
-
 		x.sync(x.display, False);
-
-		enforce(glc);
 
 		XClassHint class_;
 		XWMHints wh;
 		XSizeHints size;
-		class_.res_class = class_.res_name = cast(char*) className.toStringz;
+		class_.res_class = class_.res_name = cast(char*) options.className.toStringz;
 		x.setWMProperties(x.display, window, null, null, null, 0, &size, &wh, &class_);
 
-		this.title = title;
+		title = options.title;
 
 		Atom[1] atoms = [x.getAtom!"WM_DELETE_WINDOW"];
 		x.setWMProtocols(x.display, window, atoms.ptr, cast(int) atoms.length);
@@ -225,12 +253,6 @@ final class X11Window : AbstractWindow {
 		x.windowMap[window] = this;
 	}
 
-	~this() {
-		x.close();
-		gl.close();
-		glx.close();
-	}
-
 	bool onFirstPaintCalled;
 
 	void makeCurrent() {
@@ -238,12 +260,15 @@ final class X11Window : AbstractWindow {
 		enforce(success);
 	}
 
-	void redraw() {
-		// TODO: if window is hidden, return
+	override void redraw() {
+		if (!visibility) {
+			return;
+		}
 
 		makeCurrent();
 
 		if (!onFirstPaintCalled) {
+			onFirstPaintCalled = true;
 			onFirstPaint.emit();
 		}
 
@@ -314,10 +339,6 @@ final class X11Window : AbstractWindow {
 		}
 
 		glXSwapInterval(x.display, window, value ? 1 : 0);
-	}
-
-	void eventLoop() {
-		x.eventLoop();
 	}
 
 	override int width() const {

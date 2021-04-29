@@ -246,11 +246,20 @@ final class RenderContext {
 RenderContext globalContext;
 
 void setupGlobalContext(RendererBackend backend) {
-	globalContext = new RenderContext(backend);
+	import dui.internal.window : initWindowSystem;
+
+	initWindowSystem();
+
+	if (!globalContext) {
+		globalContext = new RenderContext(backend);
+	}
 }
 
 void freeGlobalContext() {
-	globalContext.free();
+	if (globalContext) {
+		globalContext.free();
+		globalContext = null;
+	}
 }
 
 final class Renderer {
