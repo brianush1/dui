@@ -3,36 +3,107 @@ import dui.log;
 import std.uuid;
 import std.typecons;
 
+mixin template Observable(T, string name, T defaultValue = T.init) {
+	mixin("
+		private T _" ~ name ~ " = defaultValue;
+
+		inout(T) " ~ name ~ "() inout @property {
+			return _" ~ name ~ ";
+		}
+
+		T " ~ name ~ "(T value) @property {
+			T oldValue = " ~ name ~ ";
+			" ~ name ~ " = value;
+			onChanged!name.emit(oldValue);
+			return _" ~ name ~ ";
+		}
+
+		template onChanged(string pname) if (pname == name) {
+			Signal!T onChanged;
+		}
+	");
+}
+
+/** Returns the type of an observable property, or $(D void) if the property is not observable */
+template getObservableType(alias Base, string property) {
+	static if (is(typeof(Base.onChanged!property) == Signal!T, T)) {
+		static if (is(typeof(__traits(getMember, Base, property)) == T)) {
+			alias getObservableType = T;
+		}
+		else {
+			alias getObservableType = void;
+		}
+	}
+	else {
+		alias getObservableType = void;
+	}
+}
+
 struct Signal(Args...) {
 
-	private void delegate(Args)[UUID] handlers;
+	private {
+
+		struct HandlerHolder {
+			void delegate(Args)[UUID] handlers;
+		}
+
+		HandlerHolder* data;
+
+		void initialize() {
+			if (data == null) {
+				data = new HandlerHolder;
+			}
+		}
+
+		this(HandlerHolder* existingData) {
+			data = existingData;
+		}
+
+	}
 
 	UUID connect(void delegate(Args) handler) {
+		initialize();
 		UUID id = randomUUID;
-		handlers[id] = handler;
+		data.handlers[id] = handler;
 		return id;
 	}
 
 	UUID connect(ref Signal!Args receiver) {
+		receiver.initialize();
+		HandlerHolder* _data = receiver.data;
 		return connect((Args args) {
-			receiver.emit(args);
+			Signal!Args(_data).emit(args);
 		});
 	}
 
 	bool hasSlot(UUID slot) const {
-		return (slot in handlers) != null;
+		if (data == null) {
+			return false;
+		}
+		else {
+			return (slot in data.handlers) != null;
+		}
 	}
 
 	void disconnect(UUID slot) {
-		handlers.remove(slot);
+		if (data == null) {
+			return;
+		}
+		else {
+			data.handlers.remove(slot);
+		}
 	}
 
 	void emit(Args args) const {
 		import std.array : array;
 
+		if (data == null) {
+			return;
+		}
+
 		// we use .array to create a copy so that if the handlers change around
 		// while the event is being emitted, nothing weird happens
-		foreach (handler; handlers.byValue.array) {
+		foreach (handler; data.handlers.byValue.array) {
 			try {
 				handler(args);
 			}
