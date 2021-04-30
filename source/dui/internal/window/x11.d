@@ -293,28 +293,29 @@ KeyCode xk2keycode(KeySym xk) {
 		case KeySym.XK_Hyper_R: return KeyCode.RightHyper;
 		case KeySym.XK_Meta_L: return KeyCode.LeftMeta;
 		case KeySym.XK_Meta_R: return KeyCode.RightMeta;
-		case KeySym.XK_leftarrow: return KeyCode.LeftArrow;
-		case KeySym.XK_rightarrow: return KeyCode.RightArrow;
-		case KeySym.XK_uparrow: return KeyCode.UpArrow;
-		case KeySym.XK_downarrow: return KeyCode.DownArrow;
-		case KeySym.XK_Menu: return KeyCode.ContextMenu;
+		case KeySym.XK_Left: return KeyCode.LeftArrow;
+		case KeySym.XK_Right: return KeyCode.RightArrow;
+		case KeySym.XK_Up: return KeyCode.UpArrow;
+		case KeySym.XK_Down: return KeyCode.DownArrow;
+		case KeySym.XK_Menu: return KeyCode.ContextMenu; // TODO: check that this actually works
 		// case KeySym.XK_Macro: return KeyCode.Macro; // TODO: this
 		case KeySym.XK_Num_Lock: return KeyCode.NumLock;
 		case KeySym.XK_KP_Divide: return KeyCode.NumpadSlash;
 		case KeySym.XK_KP_Multiply: return KeyCode.NumpadAsterisk;
 		case KeySym.XK_KP_Subtract: return KeyCode.NumpadMinus;
-		case KeySym.XK_KP_Decimal: return KeyCode.NumpadPeriod;
+		case KeySym.XK_KP_Add: return KeyCode.NumpadPlus;
+		case KeySym.XK_KP_Delete: return KeyCode.NumpadPeriod;
 		case KeySym.XK_KP_Enter: return KeyCode.NumpadEnter;
-		case KeySym.XK_KP_0: return KeyCode.Numpad0;
-		case KeySym.XK_KP_1: return KeyCode.Numpad1;
-		case KeySym.XK_KP_2: return KeyCode.Numpad2;
-		case KeySym.XK_KP_3: return KeyCode.Numpad3;
-		case KeySym.XK_KP_4: return KeyCode.Numpad4;
-		case KeySym.XK_KP_5: return KeyCode.Numpad5;
-		case KeySym.XK_KP_6: return KeyCode.Numpad6;
-		case KeySym.XK_KP_7: return KeyCode.Numpad7;
-		case KeySym.XK_KP_8: return KeyCode.Numpad8;
-		case KeySym.XK_KP_9: return KeyCode.Numpad9;
+		case KeySym.XK_KP_Insert: return KeyCode.Numpad0;
+		case KeySym.XK_KP_End: return KeyCode.Numpad1;
+		case KeySym.XK_KP_Down: return KeyCode.Numpad2;
+		case KeySym.XK_KP_Page_Down: return KeyCode.Numpad3;
+		case KeySym.XK_KP_Left: return KeyCode.Numpad4;
+		case KeySym.XK_KP_Begin: return KeyCode.Numpad5;
+		case KeySym.XK_KP_Right: return KeyCode.Numpad6;
+		case KeySym.XK_KP_Home: return KeyCode.Numpad7;
+		case KeySym.XK_KP_Up: return KeyCode.Numpad8;
+		case KeySym.XK_KP_Page_Up: return KeyCode.Numpad9;
 		default: return KeyCode.Unknown;
 	}
 }

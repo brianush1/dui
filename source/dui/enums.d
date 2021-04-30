@@ -13,6 +13,6 @@ enum KeyCode {
 	LeftHyper, RightHyper, LeftMeta, RightMeta,
 	LeftArrow, RightArrow, UpArrow, DownArrow,
 	ContextMenu, Macro,
-	NumLock, NumpadSlash, NumpadAsterisk, NumpadMinus, NumpadPeriod, NumpadEnter,
+	NumLock, NumpadSlash, NumpadAsterisk, NumpadMinus, NumpadPlus, NumpadPeriod, NumpadEnter,
 	Numpad0, Numpad1, Numpad2, Numpad3, Numpad4, Numpad5, Numpad6, Numpad7, Numpad8, Numpad9,
 }
