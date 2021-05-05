@@ -11,6 +11,7 @@ abstract class AbstractWindow {
 	Signal!KeyCode onKeyUp;
 
 	void redraw();
+	void queueRedraw();
 
 	void title(string value);
 	string title() const;

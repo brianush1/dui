@@ -15,8 +15,6 @@ final class Window {
 
 	Canvas canvas;
 
-	private bool redrawQueued = false;
-
 	this(string title, string className = "duiwindow", IVec2 defaultSize = IVec2(640, 480)) {
 		InternalWindowOptions options = {
 			defaultWidth: defaultSize.x,
@@ -30,8 +28,6 @@ final class Window {
 		});
 		internal.onPaint.connect({
 			import dui.internal.renderer : blitToScreen;
-
-			redrawQueued = false;
 
 			onPaint.emit();
 
@@ -68,12 +64,7 @@ final class Window {
 	}
 
 	void queueRedraw() {
-		if (!redrawQueued) {
-			redrawQueued = true;
-			enqueueEvent({
-				internal.redraw();
-			});
-		}
+		internal.queueRedraw();
 	}
 
 }

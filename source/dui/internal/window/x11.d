@@ -64,7 +64,9 @@ final class XConnection {
 					break;
 				case Expose:
 					if (auto win = ev.xexpose.window in windowMap) {
-						win.redraw();
+						if (ev.xexpose.count == 0) {
+							win.queueRedraw();
+						}
 					}
 					break;
 				case KeyPress:
@@ -383,6 +385,8 @@ final class X11Window : AbstractWindow {
 
 		makeCurrent();
 
+		redrawQueued = false;
+
 		if (!onFirstPaintCalled) {
 			onFirstPaintCalled = true;
 			onFirstPaint.emit();
@@ -392,6 +396,17 @@ final class X11Window : AbstractWindow {
 
 		glx.swapBuffers(x.display, window);
 		gl.finish();
+	}
+
+	private bool redrawQueued = false;
+
+	override void queueRedraw() {
+		if (!redrawQueued) {
+			redrawQueued = true;
+			x.enqueueEvent({
+				redraw();
+			});
+		}
 	}
 
 	private string _title;
